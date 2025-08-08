@@ -1,0 +1,19 @@
+
+# Core dependencies
+kivy>=2.3.0
+requests>=2.31.0
+
+# Firebase dependencies
+firebase-admin>=6.4.0
+
+# Excel support
+openpyxl>=3.1.0
+
+# Android support
+plyer>=2.1.0
+
+# Additional utilities
+pyjnius>=1.6.0
+
+# Cryptography for security
+cryptography>=41.0.0
