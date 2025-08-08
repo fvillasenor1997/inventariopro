@@ -1,6 +1,11 @@
 
 name: Build and Deploy Inventory App
-
+- name: Generate API Documentation
+  run: |
+    pip install pydoc-markdown
+    # Asegurarse de que la carpeta docs exista
+    mkdir -p docs
+    echo "Documentation updated for commit ${{ github.sha }}" > docs/LATEST.md
 on:
   push:
     branches: [ main, develop ]
