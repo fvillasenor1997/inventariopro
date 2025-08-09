@@ -1,4 +1,4 @@
-name: Build Android APK (InventarioPro)
+name: Build Android APK
 
 on:
   push:
@@ -37,19 +37,8 @@ jobs:
         command: buildozer android debug
         buildozer_version: master
 
-    - name: Upload APK artifact
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: inventariopro-debug-apk-${{ github.run_number }}
+        name: package
         path: bin/*.apk
-        retention-days: 30
-
-    - name: Upload build logs (if failure)
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: build-logs-${{ github.run_number }}
-        path: |
-          .buildozer/android/platform/python-for-android/dist/*/build.log
-          .buildozer/android/platform/build-*/**/*.log
-        retention-days: 7
