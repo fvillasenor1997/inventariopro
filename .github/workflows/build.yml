@@ -1,259 +1,50 @@
-name: Build and Deploy Inventory App
+name: Build Android (InventarioPro)
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
     branches: [ main ]
-  release:
-    types: [ published ]
-
-env:
-  PYTHON_VERSION: '3.11'
+  workflow_dispatch:
 
 jobs:
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install --upgrade setuptools wheel
-        pip install -r requirements.txt
-        pip install pytest pytest-cov
-    
-    - name: Run tests
-      run: |
-        pytest tests/ --cov=. --cov-report=xml || echo "No tests found, skipping"
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: false
-
   build-android:
-    name: Build Android APK
     runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
-    
+    env:
+      PYTHON_VERSION: '3.11'
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install buildozer==1.5.0 cython==0.29.33
-        sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-11-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev build-essential ccache
-        sudo apt-get install -y python3-dev libgl1-mesa-dev libgles2-mesa-dev libgstreamer1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good
-    
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        api-level: 30
-        build-tools: 30.0.3
-        ndk-version: 23.2.8568313
-    
-    - name: Create buildozer.spec
-      run: |
-        cat > buildozer.spec << EOF
-        [app]
-        title = Inventario App
-        package.name = inventarioapp
-        package.domain = com.inventario.app
-        
-        source.dir = .
-        source.include_exts = py,png,jpg,kv,atlas,json,txt,md
-        source.exclude_dirs = tests,spec
-        
-        version = 1.0
-        
-        requirements = python3,kivy==2.1.0,requests,openpyxl,plyer,pyjnius,android
-        
-        [buildozer]
-        log_level = 2
-        warn_on_root = 1
-        
-        [app]
-        android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,CAMERA
-        android.api = 30
-        android.minapi = 21
-        android.ndk = 23b
-        android.gradle_dependencies = 
-        android.gradle_repositories = 
-        android.add_src = 
-        android.add_jars = 
-        
-        p4a.branch = master
-        p4a.bootstrap = sdl2
-        p4a.local_recipes = 
-        
-        [buildozer]
-        bin_dir = ./bin
-        EOF
-    
-    - name: Setup build environment
-      run: |
-        export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-        export ANDROID_HOME=$ANDROID_SDK_ROOT
-        export NDK_HOME=$ANDROID_HOME/ndk/23.2.8568313
-        mkdir -p ~/.buildozer
-        
-    - name: Build APK
-      run: |
-        export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-        export ANDROID_HOME=$ANDROID_SDK_ROOT
-        export NDK_HOME=$ANDROID_HOME/ndk/23.2.8568313
-        buildozer android debug --verbose
-      timeout-minutes: 60
-    
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: inventario-app-debug.apk
-        path: bin/*.apk
+      - uses: actions/checkout@v4
 
-  deploy-web:
-    name: Deploy Web Version
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Create web-compatible version
-      run: |
-        # Create a simplified version for web deployment
-        mkdir -p web_dist
-        cp *.py web_dist/
-        cp requirements.txt web_dist/
-        cp README.md web_dist/
-        
-        # Create a simple web launcher
-        cat > web_dist/app.py << EOF
-        #!/usr/bin/env python3
-        import os
-        import sys
-        
-        if __name__ == '__main__':
-            # Set environment for web deployment
-            os.environ['KIVY_WINDOW'] = 'sdl2'
-            os.environ['KIVY_GL_BACKEND'] = 'gl'
-            
-            # Import and run main app
-            from main import InventoryApp, run_cli_mode
-            
-            try:
-                InventoryApp().run()
-            except Exception as e:
-                print(f"GUI mode failed: {e}")
-                print("Starting CLI mode...")
-                run_cli_mode()
-        EOF
-        
-        chmod +x web_dist/app.py
-    
-    - name: Deploy to Replit (if configured)
-      run: |
-        echo "Web version prepared in web_dist/"
-        echo "To deploy to Replit:"
-        echo "1. Create new Repl from GitHub"
-        echo "2. Connect to this repository"
-        echo "3. Run: python app.py"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-  release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    needs: [test, build-android]
-    if: github.event_name == 'release'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Download APK artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: inventario-app-debug.apk
-        path: ./
-    
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./inventario-app-debug.apk
-        asset_name: inventario-app-${{ github.event.release.tag_name }}.apk
-        asset_content_type: application/vnd.android.package-archive
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git zip unzip openjdk-11-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev build-essential ccache
+          sudo apt-get install -y python3-dev libgl1-mesa-dev libgles2-mesa-dev libgstreamer1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good
 
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Run Bandit Security Scan
-      run: |
-        pip install bandit
-        bandit -r . -f json -o bandit-report.json || true
-    
-    - name: Upload security report
-      uses: actions/upload-artifact@v4
-      with:
-        name: security-report
-        path: bandit-report.json
+      - name: Install Buildozer
+        run: |
+          python -m pip install --upgrade pip
+          pip install buildozer==1.5.0 cython==0.29.36
 
-  documentation:
-    name: Update Documentation
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 30
+          build-tools: 30.0.3
+          ndk-version: 23.2.8568313
 
-    - name: Generate API Documentation
-  run: |
-    pip install pydoc-markdown
-    mkdir -p docs  # Asegura que la carpeta docs exista
-    echo "Documentation updated for commit ${{ github.sha }}" > docs/LATEST.md  # Crea el archivo LATEST.md
+      - name: Build APK (debug)
+        env:
+          JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+        run: |
+          buildozer android debug --verbose
 
-    - name: Generate API Documentation
-      run: |
-        pip install pydoc-markdown
-        echo "Documentation updated for commit ${{ github.sha }}" > docs/LATEST.md
-    
-    - name: Commit documentation
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add docs/ || echo "No docs to add"
-        git commit -m "Update documentation [skip ci]" || echo "No changes to commit"
-        git push || echo "No changes to push"
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventariopro-debug-apk
+          path: bin/*.apk
