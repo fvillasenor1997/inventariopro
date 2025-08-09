@@ -15,15 +15,16 @@ requirements = python3,kivy==2.3.0,requests,openpyxl,plyer,cryptography
 
 orientation = portrait
 
-# Android specific
+# Android specific - matching GitHub Actions versions
 fullscreen = 0
 android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,ACCESS_NETWORK_STATE,CAMERA
 android.enable_androidx = True
 android.archs = arm64-v8a, armeabi-v7a
-android.ndk = 25b
+android.ndk = 25.2.9519653
 android.sdk = 33
 android.api = 33
 android.minapi = 21
+android.accept_sdk_license = True
 
 # python-for-android options
 p4a.branch = master

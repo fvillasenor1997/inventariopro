@@ -15,10 +15,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Accept Android SDK licenses
+      - name: Setup Android SDK with auto license acceptance
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 33
+          build-tools: 33.0.2
+          ndk-version: 25.2.9519653
+          cmake-version: 3.22.1
+
+      - name: Accept all Android licenses
         run: |
-          yes | sdkmanager --licenses || true
-          yes | sdkmanager --update || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --update || true
 
       - name: Build with Buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
@@ -26,6 +34,10 @@ jobs:
         with:
           command: buildozer android debug
           buildozer_version: master
+        env:
+          ANDROID_ACCEPT_LICENSE: 'y'
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
