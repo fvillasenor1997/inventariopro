@@ -20,6 +20,8 @@ fullscreen = 0
 android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,ACCESS_NETWORK_STATE,CAMERA
 android.enable_androidx = True
 android.archs = arm64-v8a, armeabi-v7a
+android.api = 30
+android.minapi = 21
 
 # python-for-android options
 p4a.branch = master
