@@ -11,7 +11,7 @@ source.exclude_dirs = tests, bin, .github, __pycache__, .git, .replit
 version = 1.0
 
 # Mantener dependencias necesarias y evitar firebase-admin (usamos REST con requests)
-requirements = python3,kivy==2.3.0,requests,openpyxl,plyer,cryptography,pyjnius
+requirements = python3,kivy==2.3.0,requests,openpyxl,plyer,pyjnius
 
 orientation = portrait
 
