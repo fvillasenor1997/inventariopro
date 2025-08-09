@@ -2,57 +2,54 @@ name: Build Android APK (InventarioPro)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Setup Android SDK with auto license acceptance
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 33
-          build-tools: 33.0.2
-          ndk-version: 25.2.9519653
-          cmake-version: 3.22.1
+    - name: Get Date
+      id: get-date
+      run: echo "date=$(date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
 
-      - name: Accept all Android licenses
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --update || true
+    - name: Cache Buildozer global directory
+      uses: actions/cache@v3
+      with:
+        path: .buildozer_global
+        key: buildozer-global-${{ hashFiles('buildozer.spec') }}
 
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          command: buildozer android debug
-          buildozer_version: master
-        env:
-          ANDROID_ACCEPT_LICENSE: 'y'
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
-          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+    - name: Cache Buildozer directory
+      uses: actions/cache@v3
+      with:
+        path: .buildozer
+        key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: inventariopro-debug-apk-${{ github.run_number }}
-          path: bin/*.apk
-          retention-days: 30
+    - name: Build with Buildozer
+      uses: ArtemSBulgakov/buildozer-action@v1
+      id: buildozer
+      with:
+        command: buildozer android debug
+        buildozer_version: master
 
-      - name: Upload build logs
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: build-logs-${{ github.run_number }}
-          path: |
-            .buildozer/android/platform/python-for-android/dist/*/build.log
-            .buildozer/android/platform/build-*/**/*.log
-          retention-days: 7
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: inventariopro-debug-apk-${{ github.run_number }}
+        path: bin/*.apk
+        retention-days: 30
+
+    - name: Upload build logs (if failure)
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: build-logs-${{ github.run_number }}
+        path: |
+          .buildozer/android/platform/python-for-android/dist/*/build.log
+          .buildozer/android/platform/build-*/**/*.log
+        retention-days: 7
